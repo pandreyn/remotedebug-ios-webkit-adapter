@@ -88,6 +88,7 @@ export abstract class IOSProtocol extends ProtocolAdapter {
         this._target.addMessageFilter('tools::Network.deleteCookie', (msg) => { msg.method = 'Page.deleteCookie'; return Promise.resolve(msg); });
         this._target.addMessageFilter('tools::Network.setMonitoringXHREnabled', (msg) => { msg.method = 'Console.setMonitoringXHREnabled'; return Promise.resolve(msg); });
         this._target.addMessageFilter('tools::Network.canEmulateNetworkConditions', (msg) => this.onCanEmulateNetworkConditions(msg));
+        this._target.addMessageFilter('target::Network.responseReceived', (msg) => this.onResponseReceived(msg));
 
         this._target.addMessageFilter('tools::Runtime.compileScript', (msg) => this.onRuntimeOnCompileScript(msg));
         this._target.addMessageFilter('target::Runtime.executionContextCreated', (msg) => this.onExecutionContextCreated(msg));
@@ -586,6 +587,31 @@ export abstract class IOSProtocol extends ProtocolAdapter {
         };
         this._target.fireResultToTools(msg.id, result);
         return Promise.resolve(null);
+    }
+
+    private onResponseReceived(msg: any): Promise<any> {
+        if (msg && msg.params && msg.params.response && msg.params.response.timing) {
+            msg.params.response.timing = {
+                'requestTime': msg.params.response.timing.startTime,
+                'connectStart': msg.params.response.timing.connectStart,
+                'connectEnd': msg.params.response.timing.connectEnd,
+                'dnsStart': msg.params.response.timing.domainLookupStart,
+                'dnsEnd': msg.params.response.timing.domainLookupEnd,
+                // 'proxyStart': -1,
+                // 'proxyEnd': -1,
+                // 'pushStart': -1,
+                // 'pushEnd': -1,
+                'sendStart': msg.params.response.timing.requestStart,
+                // 'sendEnd': -1,
+                'sslStart': msg.params.response.timing.secureConnectionEnd,
+                'sslEnd': msg.params.response.timing.secureConnectionStart,
+                // 'workerStart': -1,
+                // 'workerReady': -1,
+                'receiveHeadersEnd': msg.params.response.timing.responseStart
+            };
+        }
+
+        return Promise.resolve(msg);
     }
 
     private onConsoleMessageAdded(msg: any): Promise<any> {
